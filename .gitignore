@@ -1,0 +1,7 @@
+# vim
+.*.swp
+
+outputs/
+data/
+
+__pycache__
