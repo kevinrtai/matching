@@ -29,6 +29,7 @@ def parse_args():
 
     return parser.parse_args()
 
+
 def read_prefs(f_path):
     prefs = {}
     with open(f_path, 'r') as f:
@@ -38,6 +39,7 @@ def read_prefs(f_path):
             prefs[person] = prefs_csv.strip().split(',')
             line = f.readline()
     return prefs
+
 
 def read_blacklist(f_path):
     if not f_path:
@@ -53,6 +55,7 @@ def read_blacklist(f_path):
             blacklist[w].add(m.strip())
             line = f.readline()
     return blacklist
+
 
 def main():
     # Read arguments
@@ -145,6 +148,7 @@ def main():
     pickle.dump(output, open(f'outputs/results{timestamp}.smp', 'wb'))
 
     print('\nfin')
+
 
 if __name__ == '__main__':
     main()
