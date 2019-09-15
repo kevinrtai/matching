@@ -5,3 +5,11 @@ outputs/
 data/
 
 __pycache__
+
+# LaTeX
+*.aux
+*.log
+*.pdf
+
+# Temporary (to be removed upon finish of writeup)
+writeup/
