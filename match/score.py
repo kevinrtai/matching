@@ -41,8 +41,18 @@ def exponential(base_score, boost=0):
 # Scoring #
 ###########
 
-def score(matches, prefs, score_fn=one_zero, warp_fn=identity, b=0):
+def score(match, prefs, score_fn=one_zero, warp_fn=identity, b=0):
+    '''Return the uni-directional score earned by a match between a and b given a's preference list'''
+    return boost(warp_fn(score_fn(match, prefs)), b=b)
+
+
+def score_exponential(match, prefs):
+    return score(match, prefs, score_fn=frac, warp_fn=exponential, b=1)
+
+
+def score_assignment(matches, prefs, score_fn=one_zero, warp_fn=identity, b=0):
     '''Return the score earned by each match and the aggregate sum'''
-    scores = { x: boost(warp_fn(score_fn(matches[x], prefs[x])), b=b) for x in matches }
+    score_individual = lambda m, p: score(m, p, score_fn=score_fn, warp_fn=warp_fn, b=b)
+    scores = { x: score_individual(matches[x], prefs[x]) for x in matches }
     return scores, np.sum([scores[x] for x in scores])
 

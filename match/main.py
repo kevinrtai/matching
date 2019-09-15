@@ -1,8 +1,8 @@
 import argparse
-import smp as smp 
+from . import smp
 from utils import complete
 from pprint import pprint
-from score import score, one_zero, frac, boost, identity, exponential
+from .score import score_assignment, one_zero, frac, boost, identity, exponential
 import pickle
 import datetime
 from tqdm import tqdm
@@ -64,7 +64,8 @@ def main():
     # Get the requested scoring function and warping function
     score_fn = scorers[args.scorer]
     warp_fn = warpers[args.warper]
-    compute_score = lambda matches, prefs: score(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
+    compute_score = lambda matches, prefs:
+        score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
 
     # Get preferences lists, blacklist
     w_prefs = read_prefs(args.women_prefs)
