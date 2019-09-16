@@ -24,18 +24,16 @@ def _score_to_cost_matrix(score_matrix):
     return np.max(score_matrix) - score_matrix
 
 
-def solve(w_prefs, m_prefs, w_weight=0.5, m_weight=0.5):
+def solve(w_prefs, m_prefs, score_fn=score_exponential, weight=0.5):
     '''Solve matching women and men together based on scoring from their preferences'''
     women = list(w_prefs.keys())
     men = list(m_prefs.keys())
 
-    w_score_matrix = _build_score_matrix(women, men, w_prefs)
+    w_score_matrix = _build_score_matrix(women, men, w_prefs, score_fn=score_fn)
     # Have to take the transpose to make sure the proper entries line up
-    m_score_matrix = _build_score_matrix(men, women, m_prefs).T
+    m_score_matrix = _build_score_matrix(men, women, m_prefs, score_fn=score_fn).T
 
-    score_matrix = w_weight * w_score_matrix + m_weight * m_score_matrix
-
-    print(score_matrix)
+    score_matrix = weight * w_score_matrix + (1 - weight) * m_score_matrix
 
     # Convert score matrix into cost matrix (minimize cost -> maximize score)
     cost_matrix = _score_to_cost_matrix(score_matrix)

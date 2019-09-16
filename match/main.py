@@ -1,26 +1,33 @@
 import argparse
-from . import smp
-from utils import complete
-from pprint import pprint
-from .score import score_assignment, one_zero, frac, boost, identity, exponential
-import pickle
 import datetime
+import pickle
+import sys
+
 from tqdm import tqdm
+
+from .utils import complete
+from . import smp
+from .hungarian import solve as solve_hungarian
+from .score import score_assignment, score_exponential, one_zero, frac, identity, exponential
 
 scorers = {
     'one_zero': one_zero,
     'frac': frac
 }
+
 warpers = {
     'identity': identity,
     'exponential': exponential
 }
+
+methods = ['hungarian', 'smp']
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Solve the Stable Marriage Problem')
     parser.add_argument('women_prefs', metavar='W', type=str)
     parser.add_argument('men_prefs', metavar='M', type=str)
+    parser.add_argument('-m', '--method', default='hungarian', choices=methods)
     parser.add_argument('-b', '--blacklist', default=None)
     parser.add_argument('-n', '--num_exp', dest='n', default=1000, type=int)
     parser.add_argument('--weight', default=0.5, type=float, help='weight to be assigned to the women\'s score')
@@ -58,23 +65,11 @@ def read_blacklist(f_path):
     return blacklist
 
 
-def main():
-    # Read arguments
-    args = parse_args()
-
-    # Get the requested scoring function and warping function
-    score_fn = scorers[args.scorer]
-    warp_fn = warpers[args.warper]
+def run_smp(w_prefs, m_prefs, blacklist, score_fn, warp_fn, args):
     compute_score = lambda matches, prefs: \
         score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
 
-    # Get preferences lists, blacklist
-    w_prefs = read_prefs(args.women_prefs)
-    m_prefs = read_prefs(args.men_prefs)
-    blacklist = read_blacklist(args.blacklist)
     problem_size = len(w_prefs)
-
-    print(f'Solving...')
 
     results = []
     best_score = best = None
@@ -150,6 +145,38 @@ def main():
     pickle.dump(output, open(f'outputs/results{timestamp}.smp', 'wb'))
 
     print('\nfin')
+
+
+def run_hungarian(w_prefs, m_prefs, blacklist, args):
+    matches, score = solve_hungarian(w_prefs, m_prefs, score_fn=score_exponential, weight=args.weight)
+
+    print(f'Best Matches:')
+    for w in sorted(matches.keys()):
+        print(f'    {w} - {matches[w]}')
+
+
+def main():
+    # Read arguments
+    args = parse_args()
+
+    # Get the requested scoring function and warping function
+    score_fn = scorers[args.scorer]
+    warp_fn = warpers[args.warper]
+
+    # Get preferences lists, blacklist
+    w_prefs = read_prefs(args.women_prefs)
+    m_prefs = read_prefs(args.men_prefs)
+    blacklist = read_blacklist(args.blacklist)
+
+    print(f'Solving using {args.method}...')
+
+    if args.method == 'hungarian':
+        run_hungarian(w_prefs, m_prefs, blacklist, args)
+    elif args.method == 'smp':
+        run_smp(w_prefs, m_prefs, blacklist, score_fn, warp_fn, args)
+    else:
+        print('Unrecognized method')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
