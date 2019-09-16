@@ -2,13 +2,14 @@ import argparse
 import datetime
 import pickle
 import sys
+from typing import Dict, List, Set
 
 from tqdm import tqdm
 
-from .utils import complete
 from . import smp
 from .hungarian import solve as solve_hungarian
 from .score import score_assignment, score_exponential, one_zero, frac, identity, exponential
+from .utils import complete
 
 scorers = {
     'one_zero': one_zero,
@@ -23,7 +24,7 @@ warpers = {
 methods = ['hungarian', 'smp']
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Solve the Stable Marriage Problem')
     parser.add_argument('women_prefs', metavar='W', type=str)
     parser.add_argument('men_prefs', metavar='M', type=str)
@@ -38,7 +39,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def read_prefs(f_path):
+def read_prefs(f_path: str) -> Dict[str, List[str]]:
     prefs = {}
     with open(f_path, 'r') as f:
         line = f.readline()
@@ -49,7 +50,7 @@ def read_prefs(f_path):
     return prefs
 
 
-def read_blacklist(f_path):
+def read_blacklist(f_path: str) -> Dict[str, Set[str]]:
     if not f_path:
         return {}
 
@@ -65,9 +66,16 @@ def read_blacklist(f_path):
     return blacklist
 
 
-def run_smp(w_prefs, m_prefs, blacklist, score_fn, warp_fn, args):
-    compute_score = lambda matches, prefs: \
-        score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
+def run_smp(
+        w_prefs: Dict[str, List[str]],
+        m_prefs: Dict[str, List[str]],
+        blacklist: Dict[str, Set[str]],
+        score_fn,
+        warp_fn,
+        args: argparse.Namespace,
+) -> None:
+    def compute_score(matches, prefs):
+        return score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
 
     problem_size = len(w_prefs)
 
