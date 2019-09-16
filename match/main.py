@@ -1,25 +1,39 @@
 import argparse
-import smp as smp 
-from utils import complete
-from pprint import pprint
-from score import score, one_zero, frac, boost, identity, exponential
-import pickle
 import datetime
+import pickle
+import sys
+from typing import Dict, List, Set
+
 from tqdm import tqdm
+
+from . import smp
+from .hungarian import solve as solve_hungarian
+from .score import score_assignment, score_exponential, one_zero, frac, identity, exponential
+from .utils import complete
 
 scorers = {
     'one_zero': one_zero,
     'frac': frac
 }
+
 warpers = {
     'identity': identity,
     'exponential': exponential
 }
 
-def parse_args():
+methods = ['hungarian', 'smp']
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse arguments from the command line
+
+    Returns:
+        argparse.Namespace: parsed arguments
+    """
     parser = argparse.ArgumentParser(description='Solve the Stable Marriage Problem')
     parser.add_argument('women_prefs', metavar='W', type=str)
     parser.add_argument('men_prefs', metavar='M', type=str)
+    parser.add_argument('-m', '--method', default='hungarian', choices=methods)
     parser.add_argument('-b', '--blacklist', default=None)
     parser.add_argument('-n', '--num_exp', dest='n', default=1000, type=int)
     parser.add_argument('--weight', default=0.5, type=float, help='weight to be assigned to the women\'s score')
@@ -30,7 +44,15 @@ def parse_args():
     return parser.parse_args()
 
 
-def read_prefs(f_path):
+def read_prefs(f_path: str) -> Dict[str, List[str]]:
+    """Read preference list from file
+
+    Args:
+        f_path: path to file
+
+    Returns:
+        dict: preference lists keyed by person name
+    """
     prefs = {}
     with open(f_path, 'r') as f:
         line = f.readline()
@@ -41,7 +63,15 @@ def read_prefs(f_path):
     return prefs
 
 
-def read_blacklist(f_path):
+def read_blacklist(f_path: str) -> Dict[str, Set[str]]:
+    """Read blacklist from file
+
+    Args:
+        f_path: path to file
+
+    Returns:
+        dict: blacklists keyed by person name
+    """
     if not f_path:
         return {}
 
@@ -57,22 +87,28 @@ def read_blacklist(f_path):
     return blacklist
 
 
-def main():
-    # Read arguments
-    args = parse_args()
+def run_smp(
+        w_prefs: Dict[str, List[str]],
+        m_prefs: Dict[str, List[str]],
+        blacklist: Dict[str, Set[str]],
+        score_fn,
+        warp_fn,
+        args: argparse.Namespace,
+) -> None:
+    """Runs the stable marriage problem algorithm on the preference list data
 
-    # Get the requested scoring function and warping function
-    score_fn = scorers[args.scorer]
-    warp_fn = warpers[args.warper]
-    compute_score = lambda matches, prefs: score(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
+    Args:
+        w_prefs: dictionary of women's preference lists
+        m_prefs: dictionary of men's preference lists
+        blacklist: dictionary of blacklists (keyed by women)
+        score_fn: scoring function
+        warp_fn: warping function
+        args: arguments from command line
+    """
+    def compute_score(matches, prefs):
+        return score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
 
-    # Get preferences lists, blacklist
-    w_prefs = read_prefs(args.women_prefs)
-    m_prefs = read_prefs(args.men_prefs)
-    blacklist = read_blacklist(args.blacklist)
     problem_size = len(w_prefs)
-
-    print(f'Solving...')
 
     results = []
     best_score = best = None
@@ -80,7 +116,7 @@ def main():
     for i in tqdm(range(args.n)):
         # Complete any incomplete lists
         w_c, m_c = complete(w_prefs, m_prefs)
-   
+
         # Solve the SMP
         reverse_matches = smp.solve(w_c, m_c)
         matches = {reverse_matches[m]: m for m in reverse_matches}
@@ -109,7 +145,7 @@ def main():
         results.append({
             'w_c': w_c,
             'm_c': m_c,
-            'match': matches, 
+            'match': matches,
             'overall': overall,
             'w_scores': w_scores,
             'm_scores': m_scores
@@ -148,6 +184,52 @@ def main():
     pickle.dump(output, open(f'outputs/results{timestamp}.smp', 'wb'))
 
     print('\nfin')
+
+
+def run_hungarian(
+        w_prefs: Dict[str, List[str]],
+        m_prefs: Dict[str, List[str]],
+        blacklist: Dict[str, Set[str]],
+        args: argparse.Namespace
+) -> None:
+    """Solves the matching problem with the hungarian algorithm
+
+    Args:
+        w_prefs: dictionary of women's preferences
+        m_prefs: dictionary of men's preferences
+        blacklist: dictionary of blacklists, keyed by women
+        args: arguments from command line
+    """
+    matches, score = solve_hungarian(w_prefs, m_prefs, score_fn=score_exponential, weight=args.weight)
+
+    print(f'Best Matches:')
+    for w in sorted(matches.keys()):
+        print(f'    {w} - {matches[w]}')
+
+
+def main() -> None:
+    """Main function"""
+    # Read arguments
+    args = parse_args()
+
+    # Get the requested scoring function and warping function
+    score_fn = scorers[args.scorer]
+    warp_fn = warpers[args.warper]
+
+    # Get preferences lists, blacklist
+    w_prefs = read_prefs(args.women_prefs)
+    m_prefs = read_prefs(args.men_prefs)
+    blacklist = read_blacklist(args.blacklist)
+
+    print(f'Solving using {args.method}...')
+
+    if args.method == 'hungarian':
+        run_hungarian(w_prefs, m_prefs, blacklist, args)
+    elif args.method == 'smp':
+        run_smp(w_prefs, m_prefs, blacklist, score_fn, warp_fn, args)
+    else:
+        print('Unrecognized method')
+        sys.exit(1)
 
 
 if __name__ == '__main__':

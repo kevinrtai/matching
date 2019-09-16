@@ -13,3 +13,6 @@ __pycache__
 
 # Temporary (to be removed upon finish of writeup)
 writeup/
+
+# PyCharm
+.idea/

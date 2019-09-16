@@ -1,8 +1,19 @@
+from typing import Dict, List, Set
+
 import copy
 import numpy as np
 
-def solve(w_prefs_i, m_prefs_i):
-    '''Return a dictionary of matches, keyed by men, for the stable marriage problem'''
+
+def solve(w_prefs_i: Dict[str, List[str]], m_prefs_i: Dict[str, List[str]]) -> Dict[str, str]:
+    """Return a dictionary of matches, keyed by men, for the stable marriage problem
+
+    Args:
+        w_prefs_i: incomplete preference dict for the women
+        m_prefs_i: incomplete preference dict for the men
+
+    Returns:
+        Dictionary containing map from woman to man
+    """
     validate_input(m_prefs_i, w_prefs_i)
     
     # Make a copy so we don't alter the original input
@@ -12,7 +23,7 @@ def solve(w_prefs_i, m_prefs_i):
     n = len(w_prefs)
 
     # Shuffled list of women who are free
-    free = np.random.permutation(list(w_prefs.keys())).tolist()
+    free = list(np.random.permutation(list(w_prefs.keys())).tolist())
     # Set of women who are finished proposing
     done = set()
     # Set of matches
@@ -41,8 +52,14 @@ def solve(w_prefs_i, m_prefs_i):
 
     return matches
 
-def validate_input(m_prefs, w_prefs):
-    '''Make sure that the input is valid'''
+
+def validate_input(m_prefs: Dict[str, List[str]], w_prefs: Dict[str, List[str]]) -> None:
+    """Make sure that the input is valid
+
+    Args:
+        m_prefs: Dictionary of men's preferences
+        w_prefs: Dictionary of women's preferences
+    """
     women = set(w_prefs.keys())
     men = set(m_prefs.keys())
     
@@ -51,9 +68,15 @@ def validate_input(m_prefs, w_prefs):
 
     validate_prefs(w_prefs, men)
     validate_prefs(m_prefs, women)
-    
-def validate_prefs(prefs, choices):
-    '''Ensure all prefs lists are complete'''
+
+
+def validate_prefs(prefs: Dict[str, List[str]], choices: Set[str]):
+    """Ensure all preference lists are complete
+
+   Args:
+        prefs: Dictionary of preferences
+        choices: Set of choices
+    """
     for _, pref_list in prefs.items():
         if set(pref_list) != choices:
             raise Exception('incomplete list of prefs in input')
