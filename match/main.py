@@ -16,6 +16,7 @@ warpers = {
     'exponential': exponential
 }
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Solve the Stable Marriage Problem')
     parser.add_argument('women_prefs', metavar='W', type=str)
@@ -64,7 +65,7 @@ def main():
     # Get the requested scoring function and warping function
     score_fn = scorers[args.scorer]
     warp_fn = warpers[args.warper]
-    compute_score = lambda matches, prefs:
+    compute_score = lambda matches, prefs: \
         score_assignment(matches, prefs, score_fn=score_fn, warp_fn=warp_fn, b=args.boost)
 
     # Get preferences lists, blacklist
@@ -81,7 +82,7 @@ def main():
     for i in tqdm(range(args.n)):
         # Complete any incomplete lists
         w_c, m_c = complete(w_prefs, m_prefs)
-   
+
         # Solve the SMP
         reverse_matches = smp.solve(w_c, m_c)
         matches = {reverse_matches[m]: m for m in reverse_matches}
@@ -110,7 +111,7 @@ def main():
         results.append({
             'w_c': w_c,
             'm_c': m_c,
-            'match': matches, 
+            'match': matches,
             'overall': overall,
             'w_scores': w_scores,
             'm_scores': m_scores
